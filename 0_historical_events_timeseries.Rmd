@@ -1,19 +1,22 @@
 ---
-title: "Historical_Events_Timeseries"
+title: "Historical Events Analysis"
 author: "sundar pradeep"
-date: "March 31, 2015"
+date: "March 2015"
 output: html_document
 ---
+<br>
 
-#### Synopsis: 
+### Synopsis: 
 
-This is an analysis of major disasters in human history with the following objectives: <br>
+This is an analysis of major disasters in human history with the following objectives: 
+<br>
+* Understand the nature of disasters and what share of these disasters were avoidable (man-made). 
+* Explore if the pattern of disasters have changed over time, with our ability to predict natural disasters and prevent diseases.<br>
+* Estimate the impact of these disasters over the current population trends .
+<br>
 
-* Understand the nature of disasters.<br>
-* Explore if the pattern of disasters have changed over time - with our ability to predict natural disasters and prevent diseases.<br>
-* Estimate world population trends if these events had not occurred - and what share of these disasters were avoidable (man-made).<br>
 
-#### Scope, Variables and Datasets: 
+### Scope, Variables and Datasets: 
 
 Categories of major events considered for the analysis: 
 
@@ -25,18 +28,20 @@ All recorded event of above categories with at least 10,000 casualties was consi
 
 While the original intention was to analyse the trends over last 2000 years , inconsistent data availability limited the scope to a shorter time frame - from 1500 AD to present.  
 
-#### Pre-Processing:
-<br>
-* All datasets were sourced from Wikipedia  using readHTMLtable function. <br>
+### Pre-Processing:
+
+* All data sets were sourced from Wikipedia  using readHTMLtable function. <br>
 * Events were filtered for date > 1500 AD and toll > 10,000.<br>
 * Location field was cleaned and geo-coded for visualization.<br>
-* [Population](http://www.nber.org/papers/w14448) over time table was loaded for benchmarking.<br>
+* [Population](http://www.nber.org/papers/w14448) over time table was loaded for bench marking.<br>
+
 
 
 ```{r, echo=FALSE, message = FALSE, warning = FALSE }
+
 # set-up environment 
 
-setwd("~/dev/Projects/2_timeseries_visualization/")
+#setwd("~/dev/Projects/2_timeseries_visualization/")
 
 library("dplyr")
 library("tidyr")
@@ -47,94 +52,97 @@ library("gridExtra")
 library("XML")
 library("httr")
 library("vcd")
+library("reshape2")
 library("splines")
+library("gdata")
+library("googleVis")
 
-# load files.
-source("./1_get_data.R")
+rerun <- 0 # (switch rerun to 1 to rerun get & process data steps)
 
-# clean and generate tidy data for analysis.
-source("./2.1_process_manmade_data.R")
-source("./2.2_process_natural_data.R")
-source("./2.3_process_epidemic_data.R")
-source("./2.4_geocode_input_data.R")
-source("./2.5_process_population_data.R")
+if (rerun == 1) { 
+        # load and clean input files.
+        source("./1_get_data.R")
+        source("./2.1_process_manmade_data.R")
+        source("./2.2_process_natural_data.R")
+        source("./2.3_process_epidemic_data.R")
+        source("./2.4_clean_input_data.R")
+        source("./2.5_validate_locations.R")
+        source("./2.6_geocode_input_data.R")
+        source("./2.7_process_population_data.R")
+        save.image(file="./data/events.RData")
+        rerun <- 0
+} else { 
+        load("./data/events.RData")
+}
 
-
-```
-
-
-### The big picture.
-
-#### Disasters over the last 500 years across the globe. 
-
-```{r, echo=FALSE, message = FALSE, warning = FALSE }
-world.map <- map_data('world')
-
-ggplot() + 
-    geom_polygon(dat=world.map, aes(long, lat, group=group), fill="grey50") + 
-    geom_point(data=consolidated.final, 
-               aes(x=consolidated.final$lon, y=consolidated.final$lat,
-                   size=log(consolidated.in$toll), color=consolidated.final$major,
-                   position="jitter"))
 
 ```
 
 <br>
 
-* Europe, Africa and North America seems to have a disproportionate share of man-made disasters and epidemics 
-* Asia seems to be most impacted by natural disasters , followed by man-made disasters.
-* There has been no major epidemics in South America.
+### The big picture.
 
-[click](http://cdb.io/1GJRTxA) for timeseries visualization.
-
-
-Lets dig a little deeper.
 
 ```{r, echo=FALSE, message = FALSE, warning = FALSE }
+world.map <- map_data('world')
 
-minor.plot <- qplot(reorder(minor,toll),toll,data=consolidated.final,
-                    geom="boxplot",color=major, xlab="Disaster Category", main="Casualty by Disaster Type",ylab="Death toll") + theme_bw()
-
-time.plot <- qplot(decade,toll,data=consolidated.final,geom="area",
-                   color=major,fill=major, xlab="Century", main="Casualty by Disaster Type",ylab="Death toll") + theme_bw()
-
-grid.arrange(minor.plot, time.plot, ncol=1)
+ggplot() + 
+    geom_polygon(dat=world.map, aes(long, lat, group=group), fill="white") + 
+    geom_point(data=consolidated.final,
+               aes(x=consolidated.final$lon, y=consolidated.final$lat,
+                   size=log(consolidated.in$toll),
+                   color=consolidated.final$major,
+                   position="jitter",
+                 xlab=NULL, ylab=NULL,
+                 main="Major global disasters since 1500 AD")) + 
+    theme(legend.position='bottom')
 
 ```
 
-It is clear from Boxplot above that man-made disasters account for most of the casualties over the last 500 years. <br>
-The sharp spike in the death toll over time from mid-18th century might be misleading , as the graph above considers absolute numbers and ignores the sharp increase in population over the time in consideration. <br>
+<br>
+Even at this level of high level visualization it is obvious that:
 
-Share of disaster casualties as a factor of overall population ( or current population equivalent) would be a better measure for trend analysis. Clearly, Population growth trends should be included as a factor in the analysis.
+* Man-made disasters account for most of the casualties across the globe. 
+* Asia seems to be have a higher share of natural disasters than other continents.
+* North America , South America and Australia have done relatively better over the last 500 years.
+
+[click](http://cdb.io/1GJRTxA) for time series visualization.
+
+### The details.
+<br>
+
+To understand the data better , let us explore the trend over time by disaster type. 
+ 
+
+```{r, echo=FALSE, message = FALSE, warning = FALSE }
+
+qplot(decade,toll,data=consolidated.in,
+                   color=major,fill=major, xlab="Century", main="Casualty trend over time by disaster type",ylab="Death toll",stat="identity") +
+ geom_bar(stat = "identity") + theme_bw() + facet_wrap(~major,ncol=1)
+
+```
+
+
+We can see that
+
+* All three disaster categories show increase in occurrence from mid 19th century - better record keeping might possibly explain this. <br>
+* There is a significant increase in man-made disasters from late 1800s , after a relatively peaceful period of almost a century.<br>
+* Most of the casualties caused by epidemics is contributed by two major episodes ( early 20th century Influenza and late 20th century HIV)<br>
+* Overall, it is indisputably clear that man made disasters have contributed to most of the casualties , followed by epidemics and natural disasters in that order.<br>
+
 
 ### Population: Regression modeling.
 
-The problem with analyzing event casualties from 1500 AD as a share of total population is that population trend by decade, as required for the analysis is not available.<br> 
+We should also keep in mind that the sharp spike in the death toll over time from mid-18th century might be misleading , as the graph above considers absolute numbers and ignores the sharp increase in population over the time in consideration. <br>
 
-```{r, echo=FALSE, message = FALSE, warning = FALSE }
+To make the comparison of the magnitude of the events separated by time, it is important that we include population growth trends for the period as well in this analysis. 
 
-for (i in 1:nrow(consolidated.final)) {
-    if (nrow(population.in[population.in$decade==consolidated.final$decade[i],]) >= 1 ) {
-        consolidated.final$census.flag[i] = 1
-    }
-    else {
-        consolidated.final$census.flag[i] = 0
-    }
-}
+This introduces a challenge as the population census for all the event-dates is not available - the further we go back in time , less sparse is the census data.
 
-hist(consolidated.final$decade,breaks=51,col=consolidated.final$census.flag,include.lowest=T) 
-
-
-```
-
-Hence , I built a model to predict population form available sparse population metrics, using regression.
+Hence , I built a model to predict population population trend for event dates, using available sparse census over the last 500 years, using a regression model.
 
 
 ```{r, echo=FALSE, message = FALSE, warning = FALSE }
-#population.lm <- lm(total ~ poly(date,5),data=population.in)
-
-#qplot(date, total, data = population.in) +
-#geom_smooth(method = lm, formula = y ~ ns(x, df = 4)) 
 
 population.spline <- lm(total ~ ns(date, df = 4),
                         data = population.in)
@@ -144,9 +152,8 @@ prediction.by.decade <- predict(population.spline,decades)
 decades$prediction <- prediction.by.decade
 
 actual.plot <- qplot(date,total,data=population.in,main="actual",
-                     label(x="Date",y="Population")) + 
-  theme_bw()
-#geom_line(data=population.in,aes(x=date,y=total),color="green") +
+                     label(x="Date",y="Population")) + theme_bw()
+ 
 prediction.plot <- qplot(date,total,data=population.in,main="model") + 
     geom_line(data=decades,aes(x=date,y=prediction),color="red") + theme_bw()
 
@@ -158,7 +165,8 @@ grid.arrange(actual.plot, prediction.plot, overlay.plot, ncol=3)
 ```
 
 <br>
-Using this population prediction model , I calculated the growth factor for each decade and projected the current day equivalent of the casualties and replotted the disaster trend over time. 
+Using this population prediction model , I calculated the growth factor and projected the current day equivalent of the casualties by disaster type over time. 
+
 
 
 ```{r, echo=FALSE, message = FALSE, warning = FALSE }
@@ -168,55 +176,192 @@ decades$factor <- current.population / decades$prediction
 projected <- merge(consolidated.final,decades,by="decade",all.x=T)
 projected <- mutate(projected,
                     projected.toll = toll * factor)
-
-
-qplot(decade,projected.toll,data=projected,
-                   color=major,fill=major, xlab="Century", main="Adjusted Casualty by Disaster Type",ylab="Death toll",stat="identity") +
- geom_bar(stat = "identity") + theme_bw() + facet_wrap(~major)
+projected$location <- tolower(trim(projected$location)) 
+projected$projected.toll <- round(projected$projected.toll,0)
 
 ```
 
 
-We can see that 
-* All three types show increase in occurrence from 1800 AD - it is possible that this is observed due to better record keeping. 
-* There is a significant increase in man-made disasters from late 1800s , after a relatively peaceful period of almost a century.
-* Most of the casualties caused by epidemics is contributed by two major episodes ( early 20th century Influenza and late 20th century AIDS)
-* Man made disasters have contributed to most of the casualties , followed by epidemics , followed by natural disasters.
+
+### Adjusted casualty count.
 
 
-<br>
-### What-if?
-
-Now that we have a model to predict population and a growth factor for decade of the event in consideration, we can answer an interesting question .. what is the current day equivalent of the casualties - in other words , what would be our total world population (7.3B as-of-date) in case these disasters had not happened. 
+With this model we can predict current day population equivalent of casualties for these major events. 
 
 
 ```{r, echo=FALSE, message = FALSE, warning = FALSE }
 
 
-whatif1.plot <- qplot(major,projected.toll,data=projected,
-                   color=major,fill=major, xlab="Disaster Type", main="Adjusted Casualty by Disaster Type",ylab="Death toll",stat="identity") +
- geom_bar(stat = "identity") + theme_bw() 
+qplot(major,projected.toll,data=projected,
+                   color=major,fill=major, xlab="Disaster Type", main="Adjusted Total Casualty",ylab="Death toll",stat="identity") +
+ geom_bar(stat = "identity") + theme_bw() + coord_polar()
+ 
+``` 
 
-whatif2.plot <- qplot(location,projected.toll,data=projected,
-                   color=major,fill=major, xlab="Disaster Type", main="Adjusted Casualty by Country",ylab="Death toll",stat="identity") +
- geom_bar(stat = "identity") + theme_bw() 
+<br>
 
-grid.arrange(whatif1.plot, whatif2.plot, ncol=1)
+```{r, echo=FALSE, message = FALSE, warning = FALSE }
 
-#sum(projected$projected.toll)
+major_type_toll <- group_by(projected,major) %>% 
+                summarise(toll = sum(projected.toll)) %>%
+                arrange(desc(toll))  %>%
+                filter(toll >= 10.0)
+
+major_type_toll
 ```
 
 
-### Caveats: 
-* Population trends and projections are based on global averages , have not considered variations in growth trends across continents.
+It is shocking that the casualty count in today's equivalent population is more than 2.3 billion, almost a third of the current population. 
+
+
+
+#### Casualty trend over time. 
+<br>
+
+```{r, setOptions,echo=FALSE, message = FALSE, warning = FALSE }
+
+suppressPackageStartupMessages(library(googleVis))
+
+op <- options(gvis.plot.tag='chart')
+
+```
+
+
+
+```{r, results='asis', tidy=FALSE, echo=FALSE, message = FALSE, warning = FALSE }
+
+
+#setwd("~/dev/Projects/2_timeseries_visualization/")
+
+#library(dplyr)
+#library(tidyr)
+#load("./data/events.RData")
+
+minor.century <- arrange(select(projected,
+                               minor,
+                               century,
+                               projected.toll),century)  
+
+century.major <- arrange(select(projected,
+                              century,
+                              major,
+                              projected.toll) ,century)
+
+major.minor <- select(projected,
+                      major,
+                      minor,
+                      projected.toll)
+
+
+names(century.major) <- c("start","end","toll")
+names(minor.century) <- c("start","end","toll")
+names(major.minor) <- c("start","end","toll")
+
+minor.century.major <-rbind(minor.century,century.major)
+century.major.minor <-rbind(century.major,major.minor)
+
+sankey.time <- gvisSankey(minor.century.major, 
+                     from="start", to="end", 
+                     weight="toll",
+                      options=list(
+               height=250,width=600,
+               sankey="{link:{color:{fill:'lightblue'}}}"
+               ))
+
+
+sankey.type <- gvisSankey(century.major.minor, 
+                     from="start", to="end", 
+                     weight="toll",
+                      options=list(
+               height=250,width=600,
+               sankey="{link:{color:{fill:'lightblue'}}}"
+               ))
+
+
+plot(sankey.type)
+
+```
+
+<br>
+
+```{r resetOptions, message=FALSE,warning=FALSE,echo=FALSE}
+## Set options back to original options
+options(op)
+
+```
+
+
+<br>
+
+#### Casualty count by country. 
+
+```{r, echo=FALSE, message = FALSE, warning = FALSE }
+
+major_country_toll <- group_by(projected,location) %>% 
+                summarise(toll = sum(projected.toll)) %>%
+                arrange(desc(toll))  %>%
+                filter(toll >= 10.0 & location != "multiple")
+
+#major_country_toll
+```
+
+
+```{r, echo=FALSE, message = FALSE, warning = FALSE }
+
+qplot(reorder(location,toll),toll,data=major_country_toll,
+                   color=location,fill=location, xlab="Country", main="Adjusted Total Casualty by Country",ylab="Death toll",stat="identity") +
+ geom_bar(stat = "identity") + theme_bw() + scale_x_discrete(breaks=NULL)
+
+```
+
+<br>
+It is interesting to note that China accounts for almost a third of all casualties due to various disasters over the last five centuries. 
+
+Let us check which are the key events that contributed to most of these casualties.
+
+
+```{r, echo=FALSE, message = FALSE, warning = FALSE }
+major_event_toll <- tbl_df(group_by(projected,location,decade,event) %>% 
+                summarise(toll = sum(projected.toll)) %>% ungroup() %>%
+                arrange(desc(toll))  %>%
+                filter(toll >= 25.0))
+
+head(major_event_toll,20)
+
+```
+
+It is an absolute shock to see such huge number of (adjusted)casualties against individual events - many of them have resulted in death of 2-5% of entire global population at the time of occurrence. 
+It might be of interest to note that entire US population is about 5% of global population.
+This table also explains why China comes out at top as the country that has suffered most due to man made disasters.
+
 
 ### Conclusion: 
 
-While it is widely acknowledged that war have resulted in exponential advance in science and technology, we have no model at our disposal to predict how the world would have looked today if we had not lost a population equivalent to almost 2B people due to wars and man-made disasters. It will always be a guessing game. 
+<br>
+
+While it is widely acknowledged that wars have contributed to exponential advancement in science and technology, we have no model at our disposal to predict how the world would have looked today, had we not lost a population equivalent to almost 2 Billion people due to wars and man-made disasters. 
+
+Looking forward, though the frequency of man made disasters have increased in late 20th and early 21st century the death toll per event has remained comparatively low.
+The sad fact is mankind is armed with weapons of mass destruction capable of inflicting damage exponentially higher than what we have suffered till date. 
+
+Historical data that we have analysed so far gives no confidence in man-kind's ability to manage conflicts peacefully.
+
+<br>
+
+### Caveats: 
+
+<br>
+
+* Population trends and projections are based on global averages , have not considered variations in growth trends across continents.
+
+<br>
+
+
+
 
 ### Reference:
 
-Github [Source Code](https://github.com/sundarpradeep/1_EDA_NYC_Schools)
+Github [Source Code](https://github.com/sundarpradeep/Historical_Events_Analysis)
 
 <br>
 <br>

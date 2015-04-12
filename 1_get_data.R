@@ -14,7 +14,7 @@ natural.raw = readHTMLTable(naturalUrl, stringsAsFactors = FALSE)
 epidemics.list <- tbl_df(as.data.frame(epidemics.raw[[1]]))
 epidemics.list <- mutate(epidemics.list,
                          major="epidemics",
-                         minor="epidemics"
+                         minor="infectious_diseases"
                          )
 
 epidemics.list <- select(epidemics.list,-c(4,6) )

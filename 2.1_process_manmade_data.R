@@ -55,8 +55,10 @@ names(camps.in) <- c('event','location','toll','date','major','minor')
 famine.in <- tbl_df(as.data.frame(manmade.raw[[3]]))
 names(famine.in) <- c('toll.low','toll.high','event','location','start.date','end.date','notes')
 
-famine.in$toll.low <- substring(famine.in$toll.low, 20, nchar(famine.in$toll.low))
-famine.in$toll.high <- substring(famine.in$toll.high, 20, nchar(famine.in$toll.high))
+famine.in[1,]
+
+famine.in$toll.low <- substring(famine.in$toll.low, 21, nchar(famine.in$toll.low))
+famine.in$toll.high <- substring(famine.in$toll.high, 21, nchar(famine.in$toll.high))
 
 famine.in$toll.low <- gsub(",", "", famine.in$toll.low)
 famine.in$toll.high <- gsub(",", "", famine.in$toll.high)
@@ -124,10 +126,10 @@ rituals.in <- tbl_df(as.data.frame(manmade.raw[[5]]))
 
 names(rituals.in)[1:2] <- c("toll.low","toll.high")
 rituals.in$toll.low <- ifelse(nchar(rituals.in$toll.low) > 20,
-                   substring(rituals.in$toll.low, 20, nchar(rituals.in$toll.low)),
+                   substring(rituals.in$toll.low, 21, nchar(rituals.in$toll.low)),
                              rituals.in$toll.low) 
-rituals.in$toll.high <- ifelse(nchar(rituals.in$toll.high) > 20,
-                              substring(rituals.in$toll.high, 20, nchar(rituals.in$toll.high)),
+rituals.in$toll.high <- ifelse(nchar(rituals.in$toll.high) > 21,
+                              substring(rituals.in$toll.high, 21, nchar(rituals.in$toll.high)),
                               rituals.in$toll.high) 
 
 rituals.in$toll.low <- gsub(",", "", rituals.in$toll.low)
@@ -176,8 +178,8 @@ names(rituals.in)[1:2] <- c("event","location")
 others.in <- tbl_df(as.data.frame(manmade.raw[[6]]))
 names(others.in)[1:2] <- c("toll.low","toll.high")
 
-others.in$toll.low <- substring(others.in$toll.low, 20, nchar(others.in$toll.low))
-others.in$toll.high <- substring(others.in$toll.high, 20, nchar(others.in$toll.high))
+others.in$toll.low <- substring(others.in$toll.low, 21, nchar(others.in$toll.low))
+others.in$toll.high <- substring(others.in$toll.high, 21, nchar(others.in$toll.high))
 
 others.in$start.date <- substring(others.in$From, (nchar(others.in$From)-4), nchar(others.in$From))
 others.in$end.date <- substring(others.in$To, (nchar(others.in$To)-4), nchar(others.in$To))
@@ -194,7 +196,7 @@ others.in <- mutate(others.in,
                     toll = ((toll.low.keep + toll.high.keep) / 2)/1000000 , 
                     date = (extract_numeric(start.date) + extract_numeric(end.date))/2,
                     major = "man-made",
-                    minor = "others"
+                    minor = "Unrest, Sanctions etc"
 )
 
 others.in <- select(others.in,c(7,8,14:17))

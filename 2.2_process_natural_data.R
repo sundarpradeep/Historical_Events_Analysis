@@ -12,7 +12,7 @@ natural.in$toll.low.keep <- gsub("up to ", "", natural.in$toll)
 
 
 natural.in$toll.low.keep <- ifelse(nchar(natural.in$toll.low.keep) > 20,
-                            substring(natural.in$toll.low.keep, 20, nchar(natural.in$toll.low.keep)),
+                            substring(natural.in$toll.low.keep, 21, nchar(natural.in$toll.low.keep)),
                             natural.in$toll.low.keep) 
 
 natural.in <- separate(natural.in, toll.low.keep, 
